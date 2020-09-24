@@ -14,6 +14,7 @@ from model.torch_gpt2 import GPT2Config, GPT2LMHeadModel
 from data import storyDataset
 import gluonnlp
 from kogpt2.pytorch_kogpt2 import get_pytorch_kogpt2_model
+import re
 
 tok_path = get_tokenizer()
 model, vocab = get_pytorch_kogpt2_model()
@@ -35,7 +36,7 @@ from transformers import AdamW, get_linear_schedule_with_warmup
 
 model = torch.nn.DataParallel(model)
 model = model.to(device)
-print("devcie :", device)
+print("device :", device)
 model.train()
 optimizer = AdamW(model.parameters(), lr=learning_rate)
 scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=wamup_steps, num_training_steps=-1)
@@ -98,6 +99,26 @@ for epoch in range(epochs):
     # Store the model after each epoch to compare the performance of them
     if epoch % 5 == 0:
         torch.save(model.state_dict(), os.path.join(models_folder, f"gpt2_medium_joker_{epoch}.pt"))
+        print(f"========= {epoch} 번째 문장 생성 ========")
+        sent = "해리와 그의 연인 포터는 한적한 마을 해그리드에 살고 있었다."
+        toked = tok(sent)
+        print("input sentence: ", sent)
+        while 1:
+            if len(sent) > 100:
+                break
+            input_ids = torch.tensor([vocab[vocab.bos_token], ] + vocab[toked]).unsqueeze(0).to(device)
+            outputs = model.generate(
+                input_ids=input_ids,
+                max_length=50, repetition_penalty=1.2, do_sample=True, eos_token_ids=-1, num_return_sequences=3)
+
+            for i in range(3):
+                toked = vocab.to_tokens(outputs[0][i].squeeze().tolist())
+                ret = re.sub(r'(<s>|</s>)', '', ''.join(toked).replace('▁', ' ').strip())
+                print('Generated {}: {}'.format(i, ret))
+            # gen = vocab.to_tokens(torch.argmax(pred, axis=-1).squeeze().tolist())[-1]
+            # sent += gen.replace('▁', ' ')
+            # toked = tok(sent)
+        print("final sentence:", sent)
 
 
 # def generate_some_text(input_str, text_len=250):
@@ -132,18 +153,23 @@ for epoch in range(epochs):
 
 
 model.eval()
-sent = "해리와 그의 연인 포터는 한적한 마을 해그리드에 살고 있었다.."
+sent = "해리와 그의 연인 포터는 한적한 마을 해그리드에 살고 있었다."
 toked = tok(sent)
 print("input sentence: ", sent)
 while 1:
     if len(sent) > 100:
         break
     input_ids = torch.tensor([vocab[vocab.bos_token], ] + vocab[toked]).unsqueeze(0).to(device)
-    pred = model(input_ids)[0]
-    gen = vocab.to_tokens(torch.argmax(pred, axis=-1).squeeze().tolist())[-1]
-    if gen == '</s>':
-        break
-    sent += gen.replace('▁', ' ')
-    toked = tok(sent)
+    outputs = model.generate(
+        input_ids=input_ids,
+        max_length=50, repetition_penalty=1.2, do_sample=True, eos_token_ids=-1, num_return_sequences=3)
+
+    for i in range(3):
+        toked = vocab.to_tokens(outputs[0][i].squeeze().tolist())
+        ret = re.sub(r'(<s>|</s>)', '', ''.join(toked).replace('▁', ' ').strip())
+        print('Generated {}: {}'.format(i, ret))
+    # gen = vocab.to_tokens(torch.argmax(pred, axis=-1).squeeze().tolist())[-1]
+    # sent += gen.replace('▁', ' ')
+    # toked = tok(sent)
 print("final sentence:", sent)
 
