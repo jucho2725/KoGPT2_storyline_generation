@@ -10,7 +10,7 @@ from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 from gluonnlp.data import SentencepieceTokenizer
 from kogpt2.utils import download, tokenizer, get_tokenizer
-from model.torch_gpt2 import GPT2Config, GPT2LMHeadModel
+from kogpt2.model.torch_gpt2 import GPT2Config, GPT2LMHeadModel
 from data import storyDataset
 import gluonnlp
 from kogpt2.pytorch_kogpt2 import get_pytorch_kogpt2_model
