@@ -34,7 +34,7 @@ max_seq_len = 400
 
 from transformers import AdamW, get_linear_schedule_with_warmup
 
-model = torch.nn.DataParallel(model)
+# model = torch.nn.DataParallel(model)
 model = model.to(device)
 print("device :", device)
 model.train()
