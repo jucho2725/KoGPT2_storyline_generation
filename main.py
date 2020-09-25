@@ -16,12 +16,17 @@ import gluonnlp
 from kogpt2.pytorch_kogpt2 import get_pytorch_kogpt2_model
 import re
 
+if torch.cuda.is_available():
+    print("use cuda")
+    device = 'cuda'
+else:
+    device = 'cpu'
+print("device :", device)
+
 tok_path = get_tokenizer()
 model, vocab = get_pytorch_kogpt2_model()
 tok = SentencepieceTokenizer(tok_path, num_best=0, alpha=0)
-device = 'cpu'
-if torch.cuda.is_available():
-    device = 'cuda'
+
 dataset = storyDataset('./data/korean_naver_1.csv', vocab, tok)
 
 data_loader = DataLoader(dataset, batch_size=1, shuffle=False)
@@ -36,7 +41,7 @@ from transformers import AdamW, get_linear_schedule_with_warmup
 
 # model = torch.nn.DataParallel(model)
 model = model.to(device)
-print("device :", device)
+
 model.train()
 optimizer = AdamW(model.parameters(), lr=learning_rate)
 scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=wamup_steps, num_training_steps=-1)
