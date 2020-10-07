@@ -18,7 +18,7 @@ import re
 
 if torch.cuda.is_available():
     print("use cuda")
-    device = 'cuda'
+    device = 'cuda:@'
 else:
     device = 'cpu'
 print("device :", device)
@@ -51,7 +51,7 @@ batch_count = 0
 model.zero_grad()
 
 tmp_jokes_tens = None
-models_folder = 'trained_models'
+models_folder = '0925'
 if not os.path.exists(models_folder):
     os.mkdir(models_folder)
 
@@ -176,5 +176,5 @@ while 1:
     # gen = vocab.to_tokens(torch.argmax(pred, axis=-1).squeeze().tolist())[-1]
     # sent += gen.replace('▁', ' ')
     # toked = tok(sent)
-print("final sentence:", sent)
+# print("final sentence:", sent)
 
