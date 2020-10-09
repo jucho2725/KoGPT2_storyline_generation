@@ -26,7 +26,7 @@ max_seq_len = 400
 
 print("Dataset Loading... ", end=' ')
 dataset = synoDataset('./data/korean_naver_2.csv', vocab, tok)
-data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
+data_loader = DataLoader(dataset, batch_size=1, shuffle=False)
 print("[[[Done]]]")
 
 from transformers import AdamW, get_linear_schedule_with_warmup
@@ -52,9 +52,9 @@ for epoch in range(epochs):
     print(f"Epoch {epoch} started" + '=' * 30)
 
     for idx, syno in enumerate(data_loader):
-        data = torch.stack(syno)  # list of Tensor로 구성되어 있기 때문에 list를 stack을 통해 변환해준다.
-        data = data.transpose(1, 0)
-        syno_tens = data.to(device)
+        # data = torch.stack(syno)  # list of Tensor로 구성되어 있기 때문에 list를 stack을 통해 변환해준다.
+        # data = data.transpose(1, 0)
+        syno_tens = syno.to(device)
 
         # syno_tens = torch.tensor(syno).unsqueeze(0).to(device)
 
