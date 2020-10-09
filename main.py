@@ -24,10 +24,13 @@ learning_rate = 3e-5
 wamup_steps = 5000
 max_seq_len = 400
 
+print("Dataset Loading... ", end=' ')
 dataset = synoDataset('./data/korean_naver_2.csv', vocab, tok)
 data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
+print("[[[Done]]]")
 
 from transformers import AdamW, get_linear_schedule_with_warmup
+
 
 model = torch.nn.DataParallel(model)
 model = model.to(device)
