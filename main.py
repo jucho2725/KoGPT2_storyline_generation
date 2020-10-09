@@ -29,12 +29,12 @@ learning_rate = 3e-5
 wamup_steps = 5000
 max_seq_len = 400
 
+dataset = storyDataset('./data/korean_naver_2.csv', vocab, tok)
 data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
-dataset = storyDataset('./data/korean_naver_1.csv', vocab, tok)
 
 from transformers import AdamW, get_linear_schedule_with_warmup
 
-# model = torch.nn.DataParallel(model)
+model = torch.nn.DataParallel(model)
 model = model.to(device)
 # print("devcie :", device)
 model.train()
