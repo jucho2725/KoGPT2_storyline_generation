@@ -4,15 +4,10 @@ import logging
 logging.getLogger().setLevel(logging.CRITICAL)
 
 import torch
-import numpy as np
-import pandas as pd
-from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 from gluonnlp.data import SentencepieceTokenizer
-from kogpt2.utils import download, tokenizer, get_tokenizer
-from kogpt2.model.torch_gpt2 import GPT2Config, GPT2LMHeadModel
-from data import storyDataset
-import gluonnlp
+from kogpt2.utils import get_tokenizer
+from data import synoDataset
 from kogpt2.pytorch_kogpt2 import get_pytorch_kogpt2_model
 
 tok_path = get_tokenizer()
@@ -29,7 +24,7 @@ learning_rate = 3e-5
 wamup_steps = 5000
 max_seq_len = 400
 
-dataset = storyDataset('./data/korean_naver_2.csv', vocab, tok)
+dataset = synoDataset('./data/korean_naver_2.csv', vocab, tok)
 data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
 
 from transformers import AdamW, get_linear_schedule_with_warmup
