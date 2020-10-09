@@ -67,3 +67,60 @@ class storyDataset(Dataset):
 
     def __getitem__(self, index):
         return self.sentence_list[index]
+
+
+class synoDataset(Dataset):
+    """synopsis dataset"""
+
+    def __init__(self, file_path, vocab, tokenizer):
+        self.file_path = file_path
+        self.sentence_list = []
+        self.vocab = vocab
+        self.tokenizer = tokenizer
+
+        df = pd.read_csv(self.file_path)
+        df['genre'] = df['genre'].str.split(',')
+        df['genre'] = df['genre'].fillna('none')
+
+        ### gen_to_idx, genre_to_vocab 설정
+        gen_to_vocab = {}
+        genres = ['SF', 'TV영화', '공포', '느와르', '다큐멘터리', '드라마', '멜로', '로맨스', '모험', '무협', '뮤지컬',
+                  '미스터리', '범죄', '블랙코미디', '서부', '서스펜스', '스릴러', '실험', '애니메이션', '액션', '웹무비',
+                  '전쟁', '코미디', '판타지']
+        gen_to_idx = {}
+        for idx, gen in enumerate(genres):
+            gen_to_idx[gen] = idx + 6
+        idx_to_gen = {v: k for k, v in gen_to_idx.items()}
+
+        for idx, gen in idx_to_gen.items():
+            gen_to_vocab[gen] = vocab.idx_to_token[idx]
+
+        count = 0
+        for idx in range(len(df)):
+            line = df.loc[idx, 'content']
+            genres = df.loc[idx, 'genre']
+            tokenized_line = tokenizer(str(line))
+            if genres == 'none':
+                index_of_words = [vocab[vocab.bos_token], ] + vocab[tokenized_line] + [vocab[vocab.eos_token]]
+            else:
+                tmp = []
+
+                for gen in genres:
+                    try:
+                        tmp.append(gen_to_vocab[gen])
+                    except:
+                        pass
+                if len(tmp) > 0:
+                    count += 1
+
+                index_of_words = [vocab[vocab.bos_token], ] + vocab[tmp] + vocab[tokenized_line] + [
+                    vocab[vocab.eos_token]]
+            self.sentence_list.append(index_of_words)
+        print("sentence list length :", len(self.sentence_list))
+        print(f"we got {count} synos which have genres.")
+
+    def __len__(self):
+        return len(self.sentence_list)
+
+    def __getitem__(self, index):
+        return self.sentence_list[index]
