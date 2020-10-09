@@ -54,9 +54,9 @@ for epoch in range(epochs):
     for idx, syno in enumerate(data_loader):
         # data = torch.stack(syno)  # list of Tensor로 구성되어 있기 때문에 list를 stack을 통해 변환해준다.
         # data = data.transpose(1, 0)
-        syno_tens = syno.to(device)
+        # syno_tens = data.to(device)
 
-        # syno_tens = torch.tensor(syno).unsqueeze(0).to(device)
+        syno_tens = torch.tensor(syno).unsqueeze(0).to(device)
 
         # torch.Size([1, number fo tokens])
         # skip sample from dataset if it is longer than max_seq_len
