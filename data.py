@@ -58,6 +58,8 @@ class storyDataset(Dataset):
 
         for line in df['content']:
             tokenized_line = tokenizer(str(line))
+            print(tokenized_line[-1])
+
             index_of_words = [vocab[vocab.bos_token], ] + vocab[tokenized_line] + [vocab[vocab.eos_token]]
             self.sentence_list.append(index_of_words)
         print("sentence list length :", len(self.sentence_list))
