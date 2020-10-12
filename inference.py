@@ -171,10 +171,10 @@ class GPT2:
         return sent
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument(dest='modelpath', help='load model path')
-
-    args = parser.parse_args()
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument(dest='modelpath', help='load model path')
+    #
+    # args = parser.parse_args()
 
     ex1 = "해리는 이별의 아픔을 딛고 새 출발을 하고자 한다."
     ex2 = "원하는 결과가 나오지 않자, 브라운 박사는 빠르게 탈출 준비를 시작했다."
