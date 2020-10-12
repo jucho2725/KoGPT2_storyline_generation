@@ -74,10 +74,11 @@ class GPT2:
         checkpoint = torch.load(load_path, map_location=device)
 
         # KoGPT-2 언어 모델 학습을 위한 GPT2LMHeadModel 선언
-        kogpt2model = GPT2LMHeadModel(config=GPT2Config.from_dict(kogpt2_config))
-        kogpt2model.load_state_dict(checkpoint)
+        self.kogpt2model = GPT2LMHeadModel(config=GPT2Config.from_dict(kogpt2_config))
+        self.kogpt2model.load_state_dict(checkpoint)
 
-        kogpt2model.eval()
+
+        self.kogpt2model.eval()
         vocab_b_obj = gluonnlp.vocab.BERTVocab.from_sentencepiece(vocab_path,
                                                                   mask_token=None,
                                                                   sep_token=None,
@@ -88,9 +89,6 @@ class GPT2:
                                                                   eos_token='</s>')
 
         tok_path = get_tokenizer()
-        self.model, self.vocab = kogpt2model, vocab_b_obj
-        self.model = torch.nn.DataParallel(self.model)
-        self.model.to(device)
         self.tok = SentencepieceTokenizer(tok_path)
 
 
@@ -107,7 +105,7 @@ class GPT2:
             if len(toked) > 1022:
                 break
 
-            sent = self.sample_sequence(self.model, self.tok, self.vocab, sent, text_size, temperature, top_p, top_k)
+            sent = self.sample_sequence(self.kogpt2model, self.tok, self.vocab, sent, text_size, temperature, top_p, top_k)
             sent = sent.replace("//", "\n")  # 비효율적이지만 엔터를 위해서 등장
             sent = sent.replace("</s>", "")
             sent = auto_enter(sent)
