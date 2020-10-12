@@ -40,12 +40,7 @@ def generation(temperature=0.7, top_p=0.8, top_k=40, tmp_sent="", text_size=100,
     ctx = 'cuda'
     cachedir = '~/kogpt2/'
     save_path = './checkpoint/'
-    # download model
-    model_info = pytorch_kogpt2
-    model_path = download(model_info['url'],
-                          model_info['fname'],
-                          model_info['chksum'],
-                          cachedir=cachedir)
+
     # download vocab
     vocab_info = tokenizer
     vocab_path = download(vocab_info['url'],
