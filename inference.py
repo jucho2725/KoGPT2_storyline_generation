@@ -89,6 +89,7 @@ class GPT2:
 
         tok_path = get_tokenizer()
         self.model, self.vocab = kogpt2model, vocab_b_obj
+        self.model.to(device)
         self.tok = SentencepieceTokenizer(tok_path)
 
 
