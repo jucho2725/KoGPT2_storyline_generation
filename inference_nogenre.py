@@ -154,7 +154,7 @@ class GPT2:
 
         return sent
 
-    def generation_byt(self, input_sentence, temperature=0.7, top_p=0.8, top_k=40, text_size=100):
+    def generation_byt(self, input_sentence, temperature=0.8, top_p=0.95, top_k=50, text_size=200):
         ctx = 'cuda'
         device = torch.device(ctx)
 
@@ -164,18 +164,22 @@ class GPT2:
 
         input_ids = torch.tensor([self.vocab[self.vocab.bos_token], ] +  self.vocab[toked]).unsqueeze(0)
         input_ids = input_ids.to(ctx)
-        outputs = self.kogpt2model.generate(input_ids=input_ids, max_length=200, repetition_penalty=1.2, pad_token_id=3,
-                                            do_sample=True, eos_token_ids=999, num_return_sequences=1)
-
+        # outputs = self.kogpt2model.generate(input_ids=input_ids, max_length=200, repetition_penalty=1.2, pad_token_id=3,
+        #                                     do_sample=True, eos_token_ids=999, num_return_sequences=1)
+        outputs = self.kogpt2model.generate(input_ids=input_ids, eos_token_id=1, pad_token_id=3, do_sample=True, num_return_sequences=1,
+                                            max_length=text_size, min_length=25,
+                                            top_p=top_p, top_k=top_k, temperature=temperature,
+                                            repetition_penalty=1.2)
         generated_text = ''
         gen = self.vocab.to_tokens(outputs[0].squeeze().tolist())
 
         for tk in gen:
             generated_text += tk.replace('▁', ' ')
         sent = generated_text.replace("//", "\n")  # 비효율적이지만 엔터를 위해서 등장
+        sent = sent.replace("<s>", "")
         sent = sent.replace("</s>", "")
         sent = auto_enter(sent)
-        print(sent)
+        # print(sent)
         return sent
 
 if __name__ == "__main__":
@@ -189,5 +193,5 @@ if __name__ == "__main__":
 
     model = GPT2("trained_models/gpt2_s95_nogenre_1017.pt") # 이상한 단어들 전처리된 새로운 데이터로 100 epoch진
 
-    model.generation_byt(input_sentence=ex1, temperature=0.7, top_p=0.95, top_k=50, text_size=200)
-    model.generation_byt(input_sentence=ex2, temperature=0.7, top_p=0.95, top_k=50, text_size=200)
+    print(model.generation_byt(input_sentence=ex1, temperature=0.8, top_p=0.95, top_k=50, text_size=200))
+    print(model.generation_byt(input_sentence=ex2, temperature=0.8, top_p=0.95, top_k=50, text_size=200))
