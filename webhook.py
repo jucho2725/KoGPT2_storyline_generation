@@ -28,7 +28,7 @@ def get_answer():
     sessionId = data['session']
     input_text = data['queryResult']['queryText']
     print(f"intput Text : {input_text}")
-    text = model.generation(input_sentence=input_text)
+    text = model.generation_byt(input_sentence=input_text)
     print(f"output Text : {text}")
     response = fulfilment_text(text)
     response = create_response(response)

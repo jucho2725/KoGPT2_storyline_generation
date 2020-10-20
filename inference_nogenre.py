@@ -187,7 +187,7 @@ if __name__ == "__main__":
     ex1 = "해리는 이별의 아픔을 딛고 새 출발을 하고자 한다."
     ex2 = "원하는 결과가 나오지 않자, 브라운 박사는 빠르게 탈출 준비를 시작했다."
 
-    model = GPT2("trained_models/gpt2_medium_syno_95.pt") # 이상한 단어들 전처리된 새로운 데이터로 100 epoch진
+    model = GPT2("trained_models/gpt2_s95_nogenre_1017.pt") # 이상한 단어들 전처리된 새로운 데이터로 100 epoch진
 
     model.generation_byt(input_sentence=ex1, temperature=0.7, top_p=0.95, top_k=50, text_size=200)
     model.generation_byt(input_sentence=ex2, temperature=0.7, top_p=0.95, top_k=50, text_size=200)
