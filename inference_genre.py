@@ -4,8 +4,11 @@ import torch.nn.functional as F
 from gluonnlp.data import SentencepieceTokenizer
 from kogpt2.utils import get_tokenizer
 from kogpt2.utils import download, tokenizer
-from kogpt2.model.torch_gpt2 import GPT2Config, GPT2LMHeadModel
+from kogpt2.model.torch_gpt2 import GPT2LMHeadModel
+from kogpt2.configuration_gpt2 import GPT2Config
 import gluonnlp
+
+
 import argparse
 import re
 
@@ -24,7 +27,7 @@ kogpt2_config = {
     "n_head": 12,
     "n_layer": 12,
     "n_positions": 1024,
-    "vocab_size": 50000
+    "vocab_size": 50000,
 }
 def top_k_logits(logits, k):
     if k == 0:
@@ -96,9 +99,62 @@ class GPT2:
         tok_path = get_tokenizer()
         self.tok = SentencepieceTokenizer(tok_path)
 
+    def generation_fromutil(self, genres, input_sentence, temperature=0.7, top_p=0.8, top_k=40, text_size=100):
+        ctx = 'cuda'
+        device = torch.device(ctx)
+
+        def get_info(vocab):
+            ### gen_to_idx, genre_to_vocab 설정
+            gen_to_vocab = {}
+            genres = ['SF', 'TV영화', '공포', '느와르', '다큐멘터리', '드라마', '멜로', '로맨스', '모험', '무협', '뮤지컬',
+                      '미스터리', '범죄', '블랙코미디', '서부', '서스펜스', '스릴러', '실험', '애니메이션', '액션', '웹무비',
+                      '전쟁', '코미디', '판타지']
+            gen_to_idx = {}
+            for idx, gen in enumerate(genres):
+                gen_to_idx[gen] = idx + 6
+            idx_to_gen = {v: k for k, v in gen_to_idx.items()}
+
+            for idx, gen in idx_to_gen.items():
+                gen_to_vocab[gen] = vocab.idx_to_token[idx]
+            return gen_to_vocab
+
+        gen_toks = []
+        for gen in genres:
+            gen_to_vocab = get_info(self.vocab)
+            gen_tok = gen_to_vocab[gen]
+            gen_toks.append(gen_tok)
+
+        total = []
+        fmt = 'Genre: {:<6} Input Sentence: {:<4}'
 
 
-    def generation(self, genre, input_sentence, temperature=0.7, top_p=0.8, top_k=40, text_size=100):
+        sent = ''
+        sent = sent + input_sentence
+        toked = self.tok(sent)
+
+        input_ids = torch.tensor(
+            [self.vocab[self.vocab.bos_token], ] + self.vocab[gen_toks] + self.vocab[toked]).unsqueeze(0)
+        input_ids = input_ids.to(ctx)
+        outputs = self.kogpt2model.generate(input_ids=input_ids, eos_token_id=1, pad_token_id=3, do_sample=True, num_return_sequences=1,
+                                            max_length=text_size, min_length=50,
+                                            top_p=top_p, top_k=top_k, temperature=temperature,
+                                            repetition_penalty=1.2)
+
+        generated_text = ''
+        gen = self.vocab.to_tokens(outputs[0].squeeze().tolist())
+        for tk in gen:
+            generated_text += tk.replace('▁', ' ')
+        sent = generated_text.replace("//", "\n")  # 비효율적이지만 엔터를 위해서 등장
+        for unused_tok in list(gen_to_vocab.values()):
+            sent = sent.replace(f"{unused_tok}", "")
+        sent = sent.replace("<s>", "")
+        sent = sent.replace("</s>", "")
+        sent = auto_enter(sent)
+        print(fmt.format(str(genres), sent))
+        total.append(sent)
+        return total
+
+    def generation_fnc(self, genre, input_sentence, temperature=0.7, top_p=0.8, top_k=40, text_size=100):
         def get_info(vocab):
             ### gen_to_idx, genre_to_vocab 설정
             gen_to_vocab = {}
@@ -140,6 +196,7 @@ class GPT2:
             total.append(generated_text)
 
         return total
+
 
     def sample_sequence_with_genre(self, model, tok, vocab, gen_tok, sent, text_size, temperature, top_p, top_k):
         ctx = 'cuda'
@@ -218,9 +275,6 @@ class GPT2:
 
         gen_to_vocab = get_info(self.vocab)
         gen_tok = gen_to_vocab[genre]
-        print(gen_to_vocab.values())
-
-
 
         total = []
         fmt = 'Genre: {:<6} Input Sentence: {:<4}'
@@ -233,15 +287,20 @@ class GPT2:
 
         input_ids = torch.tensor([self.vocab[self.vocab.bos_token], ] + [self.vocab[gen_tok], ] + self.vocab[toked]).unsqueeze(0)
         input_ids = input_ids.to(ctx)
-        outputs = self.kogpt2model.generate(input_ids=input_ids, max_length=200, repetition_penalty=1.2, pad_token_id=3,
-                                            do_sample=True, eos_token_ids=999, num_return_sequences=1)
+        outputs = self.kogpt2model.generate(input_ids=input_ids, eos_token_id=1, pad_token_id=3, do_sample=True, num_return_sequences=1,
+                                            max_length=text_size, min_length=50,
+                                            top_p=top_p, top_k=top_k, temperature=temperature,
+                                            repetition_penalty=1.2)
 
         generated_text = ''
         gen = self.vocab.to_tokens(outputs[0].squeeze().tolist())
-        print(gen)
+        # print(gen)
         for tk in gen:
             generated_text += tk.replace('▁', ' ')
         sent = generated_text.replace("//", "\n")  # 비효율적이지만 엔터를 위해서 등장
+        for unused_tok in list(gen_to_vocab.values()):
+            sent = sent.replace(f"{unused_tok}", "")
+        sent = sent.replace("<s>", "")
         sent = sent.replace("</s>", "")
         sent = auto_enter(sent)
         print(sent)
@@ -256,18 +315,13 @@ if __name__ == "__main__":
     # args = parser.parse_args()
 
     ex1 = "해리는 이별의 아픔을 딛고 새 출발을 하고자 한다."
-    ex1_genre = "로맨스"
+    gen1 = ["로맨스", "멜로"]
     ex2 = "원하는 결과가 나오지 않자, 브라운 박사는 빠르게 탈출 준비를 시작했다."
-    ex2_genre = "스릴러"
+    gen2 = ["스릴러", "공포"]
 
-    # model = GPT2(args.modelpath)
-    model = GPT2("trained_models/nipa/gpt2_medium_syno_95.pt")
+    model = GPT2("trained_models/gpt2_genre_pad_50.pt")
 
-    # model.generation(genre= ex1_genre, input_sentence=ex1, temperature=0.7, top_p=0.95, top_k=50, text_size=200)
-    # model.generation(genre= ex2_genre, input_sentence=ex2, temperature=0.7, top_p=0.95, top_k=50, text_size=200)
-    # model.generation(genre= ex1_genre, input_sentence=ex2, temperature=0.7, top_p=0.95, top_k=50, text_size=200)
-    # model.generation(genre= ex2_genre, input_sentence=ex1, temperature=0.7, top_p=0.95, top_k=50, text_size=200)
-
-    model.generation_byt(genre= ex1_genre, input_sentence=ex1, temperature=0.7, top_p=0.95, top_k=50, text_size=200)
-    model.generation_byt(genre= ex2_genre, input_sentence=ex2, temperature=0.7, top_p=0.95, top_k=50, text_size=200)
-    model.generation_byt(genre= ex1_genre, input_sentence=ex2, temperature=0.7, top_p=0.95, top_k=50, text_size=200)
+    model.generation_fromutil(genres= gen1, input_sentence=ex1, temperature=0.9, top_p=0.95, top_k=30, text_size=200)
+    model.generation_fromutil(genres= gen2, input_sentence=ex2, temperature=0.9, top_p=0.95, top_k=30, text_size=200)
+    model.generation_fromutil(genres= gen2, input_sentence=ex1, temperature=0.9, top_p=0.95, top_k=30, text_size=200)
+    model.generation_fromutil(genres= gen1, input_sentence=ex2, temperature=0.9, top_p=0.95, top_k=30, text_size=200)

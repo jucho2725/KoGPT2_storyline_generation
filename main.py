@@ -15,12 +15,12 @@ model, vocab = get_pytorch_kogpt2_model()
 tok = SentencepieceTokenizer(tok_path, num_best=0, alpha=0)
 device = 'cpu'
 if torch.cuda.is_available():
-    device = 'cuda'
+    device = 'cuda:1'
 print(device)
 
 batch_size = 16
 epochs = 100
-learning_rate = 3e-5
+learning_rate = 1e-4
 wamup_steps = 5000
 max_seq_len = 400
 
@@ -32,7 +32,8 @@ print("[[[Done]]]")
 from transformers import AdamW, get_linear_schedule_with_warmup
 
 
-model = torch.nn.DataParallel(model)
+# model = torch.nn.DataParallel(model)
+torch.cuda.device("cuda:1")
 model = model.to(device)
 # print("devcie :", device)
 model.train()
@@ -60,26 +61,9 @@ for epoch in range(epochs):
 
         # torch.Size([1, number fo tokens])
         # skip sample from dataset if it is longer than max_seq_len
-        if syno_tens.size()[1] > max_seq_len:
-            continue
-
-        # The first sequence in the sequence
-        if not torch.is_tensor(tmp_synos_tens):
-            tmp_synos_tens = syno_tens
-            continue
-        else:
-            # The next syno does not fit in so we process the sequence and leave the last syno
-            # as the start for next sequence
-            if tmp_synos_tens.size()[1] + syno_tens.size()[1] > max_seq_len:
-                work_synos_tens = tmp_synos_tens
-                tmp_synos_tens = syno_tens
-            else:
-                # Add the syno to sequence, continue and try to add more
-                tmp_synos_tens = torch.cat([tmp_synos_tens, syno_tens[:, 1:]], dim=1)
-                continue
 
         # sequence ready, process it through the model
-        outputs = model(work_synos_tens, labels=work_synos_tens)
+        outputs = model(synos_tens, labels=work_synos_tens)
         loss, logits = outputs[:2]
         loss.backward()
         sum_loss = sum_loss + loss.detach().data
@@ -94,12 +78,12 @@ for epoch in range(epochs):
             model.zero_grad()
 
         if batch_count == 100:
-            print(f"sum loss {sum_loss}")
+            print(f"average loss for each batch {sum_loss / 100}")
             batch_count = 0
             sum_loss = 0.0
 
     # Store the model after each epoch to compare the performance of them
     if epoch % 5 == 0:
-        torch.save(model.state_dict(), os.path.join(models_folder, f"gpt2_medium_syno_{epoch}.pt"))
+        torch.save(model.state_dict(), os.path.join(models_folder, f"gpt2_genre_{epoch}.pt"))
 
 

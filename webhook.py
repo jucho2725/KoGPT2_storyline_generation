@@ -17,7 +17,7 @@ logger.setLevel(logging.INFO)
 app = Flask(__name__)
 
 
-path = "./trained_models/gpt2_s95_1016.pt"
+path = "./trained_models/gpt2_s95_nogenre_1017.pt"
 model = GPT2(load_path = path)
 
 # syno model
