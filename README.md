@@ -13,7 +13,7 @@ Storyline Generation Model based on KoGPT2
 먼저, Github 저장소를 본인의 디렉토리에 받아주세요.
 
 ```
-$git clone https://github.com/jucho2725/KOGPT2_storyline_generation.git
+$git clone https://github.com/jucho2725/KoGPT2_storyline_generation.git
 ```
 
 필수 패키지를 설치하기 위해 다음을 실행해주세요. 
