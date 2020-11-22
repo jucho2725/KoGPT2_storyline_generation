@@ -1,91 +1,66 @@
-# ktextaug
+# KoGPT2-storyline-generation
+
+Storyline Generation Model based on KoGPT2
+
+한국어 사전학습 언어모델인 KoGPT2를 기반으로 한 스토리라인 생성 모델입니다.
+
+사전학습모델은 SKTAI의 KoGPT2를 사용하였습니다. (https://github.com/SKT-AI/KoGPT2)
 
 
-Data augmentation Toolkit for Korean text.
-It provides transfomative text augmentation methods.
 
-한국어 텍스트 증강 기법을 모아둔 패키지입니다.
-현재는 변형적 텍스트 증강기법만을 구현해두었으며, 생성적 텍스트 증강기법 모델 또한 추가될 예정입니다.
+## Prerequisites
 
-## Installation
-
-### Prerequisites
-
-* Python 3.6
-* Beautifulsoup4>=4.6.0
-* Googletrans>=2.4.0
-* Pandas>=1.0.4
-* konlpy>=0.5.2
-* nltk>=3.5
-
-in command line:
+먼저, Github 저장소를 본인의 디렉토리에 받아주세요.
 
 ```
-pip install ktextaug
+$git clone https://github.com/jucho2725/KOGPT2_storyline_generation.git
 ```
 
-1. 현재 mecab 으로 토크나이저가 고정되어 있습니다. 
-      konlpy 의 경우 자동으로 설치가 되나, mecab-ko는 따로 직접 설치해야 합니다. 
-      (토크나이저를 직접 선택할 수 있도록 수정 예정)
+필수 패키지를 설치하기 위해 다음을 실행해주세요. 
 
-2. 현재 nltk에 한국어 불용어 사전을 추가하여 사용중입니다. 
-     한국어 불용어 사전은 다음 링크를 참고했습니다. 
-     (불용어사전 및 nltk 설치 없이 사용가능하도록 수정 예정)
-
-  https://www.ranks.nl/stopwords/korean/ 
-
-  https://bab2min.tistory.com/544
-
-## Getting Started
-
-ktextaug를 사용하는 간단한 예제입니다. 
+패키지의 버젼이 적힌 것과 다를시 다양한 오류가 발생할 수 있습니다. 
 
 ```
-import ktextaug
-
-text = "이 문장은 변형적 데이터 증강기법의 예시 문장입니다."
-tokenizer = bring_it_your_own # 토크나이저는 어떤 토크나이저를 사용하더라도 상관없습니다.
-tokens = tokenizer.tokenize(text)
-result = ktextaug.random_swap(tokens, 2) # 토큰 시퀀스 내 두 단어의 위치를 변경하는 작업(random swap)을 2회 시행합니다. 
-print(result)
-# ['이', '문장', '은', '예시', '적', '데이터', '기법', '증강', '의', '문장', '변형', '입니다', '.']
+$pip install -r requirements.txt
 ```
 
-## More examples
+## How to train
 
-더 자세한 사용 예시는 examples 폴더 내의 예시들을 확인해주세요.
+학습하기 위한 간단한 예제입니다. 
 
-- `summarize.py` : 각 기법을 사용한 예시를 보여줍니다.
-- `multiprocessing.py` : .csv 형식의 데이터셋을 받아 증강된 데이터셋 파일을 제공해줍니다. 시간이 많이 소요되는 기법들을 multiprocessing 을 이용하처리했습니다. 
+```
+$python train.py --data_path your_file
+```
 
-## Test it with sample data
+자세한 arguments 는 `$python train.py -h` 를 통해 확인해주세요.
 
-데이터 증강기법의 성능을 확인하실 수 있도록, 매우 작은 데이터셋을 `src/data/` 에 올려두었습니다.
-이 데이터는 nsmc 데이터셋의 훈련 데이터셋을 1000개 랜덤 샘플링한 결과입니다.
-(출처: https://github.com/e9t/nsmc)
 
-해당 데이터를 가지고 증강기법을 적용해서 결과의 차이를 확인해주세요!
-(.csv 파일을 다루는 예시는 `multiprocessing.py` 에서 확인 가능합니다)
+
+모델에서 학습에 사용된 데이터는 네이버 영화 줄거리이며, 크롤링한 데이터 중 장르 정보가 있는 데이터 약 4만7천여 건입니다.
+
+## How to generate
+
+훈련된 모델로 텍스트를 생성하기 위해선 `inference.py` 를 실행해주세요
+
+```
+$python inference.py
+```
+
+## Try Demo
+
+훈련된 모델은 데모 페이지 링크에서 확인해볼 수 있습니다. (http://115.145.173.133:1994/)
+
+링크에서 'Ver2. KoGPT2-Storyline' 모델을 확인해주세요
+
+(주의: 언제든 데모 페이지 사용이 종료될 수 있습니다.)
+
+![image-20201122185924356](/home/jucho/.config/Typora/typora-user-images/image-20201122185924356.png)
 
 ## Things to know
 
-backtranslation 기법을 위해 사용되는 googletrans 패키지에 이슈가 있습니다. (아래 링크 참고)
+Transformers 에서 데이터 생성 후처리를 위해 generation 관련 util 들을 수정했습니다. `modeling_utils.py` 의 generation 함수에서 확인 가능합니다.
 
-https://github.com/ssut/py-googletrans/issues/234
-
-해당 이슈가 해결될 때 까지 간혹 "AttributeError: 'NoneType' object has no attribute 'group'" 에러가 발생할 수 있습니다.
-
-## Author, Contact
-
-이 패키지는 성균관대학교 정윤경 교수님 연구실 ING-lab 에서 만들었으며, 참여한 사람들은 다음과 같습니다
-
-박종혁, 이정훈, 전현규, 정민수, 조진욱
+## Contact
 
 관련된 문의는 cju2725@gmail.com 으로 부탁드립니다.
 
-## TO DO
-
-1. Generative Models 추가 예정 
-2. 동의어 불러오는 과정의 오류 해결
-3. tokenizer 받기 (기본은 설치 안해도 되는 간단한걸로)
-4. 결과 해석해주는 기능
