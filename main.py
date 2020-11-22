@@ -20,9 +20,9 @@ print(device)
 
 batch_size = 16
 epochs = 100
-learning_rate = 1e-4
+learning_rate = 3e-5
 wamup_steps = 5000
-max_seq_len = 400
+max_seq_len = 1024
 
 print("Dataset Loading... ", end=' ')
 dataset = synoDataset('./data/korean_naver_2.csv', vocab, tok)
@@ -30,7 +30,6 @@ data_loader = DataLoader(dataset, batch_size=1, shuffle=False)
 print("[[[Done]]]")
 
 from transformers import AdamW, get_linear_schedule_with_warmup
-
 
 # model = torch.nn.DataParallel(model)
 torch.cuda.device("cuda:1")
@@ -57,13 +56,43 @@ for epoch in range(epochs):
         # data = data.transpose(1, 0)
         # syno_tens = data.to(device)
 
+        # """  max 시퀀스가 넘으면 슬라이싱 """
+        if len(syno) > max_seq_len:
+            syno = syno[:max_seq_len]
+
         syno_tens = torch.tensor(syno).unsqueeze(0).to(device)
 
+        """ max 시퀀스 까지 이어붙이기 """
         # torch.Size([1, number fo tokens])
         # skip sample from dataset if it is longer than max_seq_len
+        # if syno_tens.size()[1] > max_seq_len:
+        #     print(f"syno tens > max seq len : {syno_tens.size()[1]}")
+        #     continue
+
+        # # The first sequence in the sequence
+        # if not torch.is_tensor(tmp_synos_tens):
+        #     tmp_synos_tens = syno_tens
+        #     continue
+        # else:
+        #     # The next syno does not fit in so we process the sequence and leave the last syno
+        #     # as the start for next sequence
+        #     if tmp_synos_tens.size()[1] + syno_tens.size()[1] > max_seq_len:
+        #         print(f"tmp + syno tens > max seq len : {tmp_synos_tens.size()[1]}, {syno_tens.size()[1]}")
+        #         work_synos_tens = tmp_synos_tens
+        #         tmp_synos_tens = syno_tens
+        #     else:
+        #         # Add the syno to sequence, continue and try to add more
+        #         print(f"tmp + syno tens < max seq len : {tmp_synos_tens.size()[1]}, {syno_tens.size()[1]}")
+        #         tmp_synos_tens = torch.cat([tmp_synos_tens, syno_tens[:, 1:]], dim=1)
+        #         print(f"tmp + syno tens concat : {tmp_synos_tens.size()[1]}")
+        #         continue
+
+        # print(f"added : {work_synos_tens.shape}")
+        # print(f"normal : {syno_tens.shape}")
 
         # sequence ready, process it through the model
-        outputs = model(synos_tens, labels=work_synos_tens)
+        # outputs = model(work_synos_tens, labels=work_synos_tens)
+        outputs = model(syno_tens, labels=syno_tens)
         loss, logits = outputs[:2]
         loss.backward()
         sum_loss = sum_loss + loss.detach().data
@@ -78,12 +107,12 @@ for epoch in range(epochs):
             model.zero_grad()
 
         if batch_count == 100:
-            print(f"average loss for each batch {sum_loss / 100}")
+            print(f"average loss for 100 epoch {sum_loss / 1000}")
             batch_count = 0
             sum_loss = 0.0
 
     # Store the model after each epoch to compare the performance of them
-    if epoch % 5 == 0:
-        torch.save(model.state_dict(), os.path.join(models_folder, f"gpt2_genre_{epoch}.pt"))
+    if epoch % 10 == 0:
+        torch.save(model.state_dict(), os.path.join(models_folder, f"gpt2_genre_pad_{epoch}.pt"))
 
 

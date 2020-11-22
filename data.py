@@ -81,14 +81,16 @@ class synoDataset(Dataset):
         self.tokenizer = tokenizer
 
         df = pd.read_csv(self.file_path)
-        df['genre'] = df['genre'].str.split(',')
-        df['genre'] = df['genre'].fillna('none')
+
+        df['genre'] = df['genre'].str.strip("[]").str.split(',')
+        # df['genre'] = df['genre'].fillna('none')
 
         ### gen_to_idx, genre_to_vocab 설정
         gen_to_vocab = {}
         genres = ['SF', 'TV영화', '공포', '느와르', '다큐멘터리', '드라마', '멜로', '로맨스', '모험', '무협', '뮤지컬',
-                  '미스터리', '범죄', '블랙코미디', '서부', '서스펜스', '스릴러', '실험', '애니메이션', '액션', '웹무비',
-                  '전쟁', '코미디', '판타지']
+                   '미스터리', '범죄', '서부', '서스펜스', '스릴러', '애니메이션', '액션',
+                   '멜로/로맨스', '가족', '서사', '전쟁', '코미디', '판타지']
+        print(f"We have {len(genres)} genres")
         gen_to_idx = {}
         for idx, gen in enumerate(genres):
             gen_to_idx[gen] = idx + 6
@@ -98,31 +100,59 @@ class synoDataset(Dataset):
             gen_to_vocab[gen] = vocab.idx_to_token[idx]
 
         count = 0
+        err = 0
         for idx in range(len(df)):
             line = df.loc[idx, 'content']
             genres = df.loc[idx, 'genre']
             tokenized_line = tokenizer(str(line))
-            if genres == 'none':
+            if genres == "'none'":
+                print(genres)
                 index_of_words = [vocab[vocab.bos_token], ] + vocab[tokenized_line] + [vocab[vocab.eos_token]]
             else:
                 tmp = []
 
                 for gen in genres:
                     try:
-                        tmp.append(gen_to_vocab[gen])
-                    except:
+                        tmp.append(gen_to_vocab[gen.strip("' '")])
+                    except Exception as e:
                         pass
                 if len(tmp) > 0:
                     count += 1
-
+                else:
+                    err += 1
                 index_of_words = [vocab[vocab.bos_token], ] + vocab[tmp] + vocab[tokenized_line] + [
                     vocab[vocab.eos_token]]
             self.sentence_list.append(index_of_words)
-        print("sentence list length :", len(self.sentence_list))
+
+        print(f"average length of data : {sum(df['content'].str.len()) / len(df)}")
+
+        print("total data :", len(self.sentence_list))
+
+        print("=== test genres ===")
         print(f"we got {count} synos which have genres.")
+        print(f"we lose {err} synos because their genres are not included.")
+        print(f"match full == count + err {len(self.sentence_list) == count+err}")
 
     def __len__(self):
         return len(self.sentence_list)
 
     def __getitem__(self, index):
         return self.sentence_list[index]
+
+if __name__ == "__main__":
+    import torch
+    from gluonnlp.data import SentencepieceTokenizer
+    from kogpt2.utils import get_tokenizer
+    from data import synoDataset
+    from kogpt2.pytorch_kogpt2 import get_pytorch_kogpt2_model
+    from time import time
+
+    tok_path = get_tokenizer()
+    _, vocab = get_pytorch_kogpt2_model()
+    tok = SentencepieceTokenizer(tok_path, num_best=0, alpha=0)
+
+    start = time()
+    print("Dataset Loading... ", end=' ')
+    dataset = synoDataset('./data/korean_naver_3.csv', vocab, tok)
+    end = time()
+    print(f"{start - end}")

@@ -9,6 +9,8 @@ from gluonnlp.data import SentencepieceTokenizer
 from kogpt2.utils import get_tokenizer
 from data import synoDataset
 from kogpt2.pytorch_kogpt2 import get_pytorch_kogpt2_model
+from kogpt2.model.torch_gpt2 import GPT2LMHeadModel
+from kogpt2.configuration_gpt2 import GPT2Config
 
 kogpt2_config = {
     "initializer_range": 0.02,
@@ -26,10 +28,11 @@ model, vocab = get_pytorch_kogpt2_model()
 tok = SentencepieceTokenizer(tok_path, num_best=0, alpha=0)
 device = 'cpu'
 if torch.cuda.is_available():
-    device = 'cuda'
+    device = torch.device("cuda:2")
+torch.cuda.device("cuda:2")
 print(device)
 org_path = "trained_models/gpt2_j20_1007.pt"
-load_path = "trained_models/gpt2_medium_syno_95.pt"
+load_path = "trained_models/gpt2_genre_pad_50.pt"
 
 checkpoint = torch.load(load_path, map_location=device)
 # 1013: special token 학습한 뒤로 keys 값이 달라져서 이와 같은 작업 필요
@@ -77,34 +80,14 @@ for epoch in range(epochs):
     print(f"Epoch {epoch} started" + '=' * 30)
 
     for idx, syno in enumerate(data_loader):
-        # data = torch.stack(syno)  # list of Tensor로 구성되어 있기 때문에 list를 stack을 통해 변환해준다.
-        # data = data.transpose(1, 0)
-        # syno_tens = data.to(device)
+        # """  max 시퀀스가 넘으면 슬라이싱 """
+        if len(syno) > max_seq_len:
+            syno = syno[:max_seq_len]
 
         syno_tens = torch.tensor(syno).unsqueeze(0).to(device)
 
-        # torch.Size([1, number fo tokens])
-        # skip sample from dataset if it is longer than max_seq_len
-        if syno_tens.size()[1] > max_seq_len:
-            continue
-
-        # The first sequence in the sequence
-        if not torch.is_tensor(tmp_synos_tens):
-            tmp_synos_tens = syno_tens
-            continue
-        else:
-            # The next syno does not fit in so we process the sequence and leave the last syno
-            # as the start for next sequence
-            if tmp_synos_tens.size()[1] + syno_tens.size()[1] > max_seq_len:
-                work_synos_tens = tmp_synos_tens
-                tmp_synos_tens = syno_tens
-            else:
-                # Add the syno to sequence, continue and try to add more
-                tmp_synos_tens = torch.cat([tmp_synos_tens, syno_tens[:, 1:]], dim=1)
-                continue
-
         # sequence ready, process it through the model
-        outputs = model(work_synos_tens, labels=work_synos_tens)
+        outputs = model(syno_tens, labels=syno_tens)
         loss, logits = outputs[:2]
         loss.backward()
         sum_loss = sum_loss + loss.detach().data
@@ -125,6 +108,6 @@ for epoch in range(epochs):
 
     # Store the model after each epoch to compare the performance of them
     if epoch % 5 == 0:
-        torch.save(model.state_dict(), os.path.join(models_folder, f"gpt2_medium_syno_{epoch}.pt"))
+        torch.save(model.state_dict(), os.path.join(models_folder, f"gpt2_genre_pad_{epoch + 51}.pt"))
 
 

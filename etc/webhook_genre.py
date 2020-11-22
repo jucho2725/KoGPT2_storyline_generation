@@ -6,7 +6,7 @@ import re
 import torch
 from flask import Flask, render_template, request
 from flask import make_response
-from inference_nogenre import GPT2
+from inference_genre import GPT2
 # from flask_bootstrap import Bootstrap
 
 import os
@@ -17,8 +17,14 @@ logger.setLevel(logging.INFO)
 app = Flask(__name__)
 
 
-path = "./trained_models/gpt2_s95_nogenre_1017.pt"
+path = "../trained_models/gpt2_genre3_30.pt"
 model = GPT2(load_path = path)
+
+def parse_genre(text):
+    parsed = [x.lstrip('[ ') for x in text.split(']')]
+    genres = parsed[:-1]
+    input_text = parsed[-1]
+    return genres, input_text
 
 # syno model
 @app.route('/webhook', methods=['GET', 'POST'])
@@ -26,9 +32,10 @@ def get_answer():
     print("test1")
     data = request.get_json(silent=True)
     sessionId = data['session']
-    input_text = data['queryResult']['queryText']
+    text = data['queryResult']['queryText']
+    genres, input_text = parse_genre(text)
     print(f"intput Text : {input_text}")
-    text = model.generation_byt(input_sentence=input_text)
+    text = model.generation_fromutil(genres=genres, input_sentence=input_text)[0]
     print(f"output Text : {text}")
     response = fulfilment_text(text)
     response = create_response(response)
@@ -60,6 +67,7 @@ def fulfilment_text(text):
             text
     }
     return response
+
 
 
 if __name__ == '__main__':

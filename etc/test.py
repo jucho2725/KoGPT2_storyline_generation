@@ -1,6 +1,6 @@
 import pandas as pd
 
-df = pd.read_csv("data/korean_naver_2.csv")
+df = pd.read_csv("../data/korean_naver_2.csv")
 
 print(len(df))
 

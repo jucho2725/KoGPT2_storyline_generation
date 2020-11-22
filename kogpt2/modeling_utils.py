@@ -36,6 +36,75 @@ from transformers.file_utils import (
     is_remote_url,
 )
 
+from gluonnlp.data import SentencepieceTokenizer
+import gluonnlp
+import os
+import requests
+import hashlib
+import sys
+tokenizer = {
+    'url':
+    'https://kobert.blob.core.windows.net/models/kogpt2/tokenizer/kogpt2_news_wiki_ko_cased_818bfa919d.spiece',
+    'fname': 'kogpt2_news_wiki_ko_cased_818bfa919d.spiece',
+    'chksum': '818bfa919d'
+}
+
+def download(url, filename, chksum, cachedir='~/kogpt2/'):
+    f_cachedir = os.path.expanduser(cachedir)
+    os.makedirs(f_cachedir, exist_ok=True)
+    file_path = os.path.join(f_cachedir, filename)
+    if os.path.isfile(file_path):
+        if hashlib.md5(open(file_path,
+                            'rb').read()).hexdigest()[:10] == chksum:
+            print('using cached model')
+            return file_path
+    with open(file_path, 'wb') as f:
+        response = requests.get(url, stream=True)
+        total = response.headers.get('content-length')
+
+        if total is None:
+            f.write(response.content)
+        else:
+            downloaded = 0
+            total = int(total)
+            for data in response.iter_content(
+                    chunk_size=max(int(total / 1000), 1024 * 1024)):
+                downloaded += len(data)
+                f.write(data)
+                done = int(50 * downloaded / total)
+                sys.stdout.write('\r[{}{}]'.format('█' * done,
+                                                   '.' * (50 - done)))
+                sys.stdout.flush()
+    sys.stdout.write('\n')
+    assert chksum == hashlib.md5(open(
+        file_path, 'rb').read()).hexdigest()[:10], 'corrupted file!'
+    return file_path
+
+def koGPT2Vocab():
+    cachedir = '~/kogpt2/'
+
+    # download vocab
+    vocab_info = tokenizer
+    vocab_path = download(vocab_info['url'],
+                          vocab_info['fname'],
+                          vocab_info['chksum'],
+                          cachedir=cachedir)
+
+    koGPT2_vocab = gluonnlp.vocab.BERTVocab.from_sentencepiece(vocab_path,
+                                                               mask_token=None,
+                                                               sep_token=None,
+                                                               cls_token=None,
+                                                               unknown_token='<unk>',
+                                                               padding_token='<pad>',
+                                                               bos_token='<s>',
+                                                               eos_token='</s>')
+    return koGPT2_vocab
+vocab = koGPT2Vocab()
+ban_list = [1282, 2919, 743, 11766, 6379, 3327, 47437, 49902, 22453, 21222, 3673, 20605,
+            743, 11766, 6379, 3327, 47437 ,15108, 18371, 3983, 14481, 2994, 4367, 35805, 11073,
+            47941, 253, 5, 964, 47491]
+
+continue_list = [3143, 47812, 47774, 6828]
 
 logger = logging.getLogger(__name__)
 
@@ -130,6 +199,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin):
     pretrained_model_archive_map = {}
     base_model_prefix = ""
 
+
     @property
     def dummy_inputs(self):
         """ Dummy inputs to do a forward pass in the network.
@@ -151,6 +221,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin):
             )
         # Save config in model
         self.config = config
+        self.prev = None
 
     @property
     def base_model(self):
@@ -1002,6 +1073,8 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin):
         encoder_outputs,
         attention_mask,
     ):
+        ### fixed ###
+        # total = []
         """ Generate sequences for each example without beam search (num_beams == 1).
             All returned sequence are generated independantly.
         """
@@ -1042,9 +1115,29 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin):
                     next_token_logits = next_token_logits / temperature
                 # Top-p/top-k filtering
                 next_token_logits = top_k_top_p_filtering(next_token_logits, top_k=top_k, top_p=top_p)
+
+                """ 201029 fixed - change <unk>, _< and < prob to zero """
+                # # edit logits
+                # next_token_logits[0, 5] = float('-inf')
+                # next_token_logits[0, 964] = float('-inf')
+                # next_token_logits[0, 47491] = float('-inf')
                 # Sample
                 probs = F.softmax(next_token_logits, dim=-1)
+
                 next_token = torch.multinomial(probs, num_samples=1).squeeze(1)
+
+                """ 201111 fixed - check ban list """
+                while next_token.item() in ban_list:
+                    # print("banned")
+                    # print(f"next token: {next_token.item()}, {vocab.idx_to_token[next_token]}, {probs[0, next_token.item()]}")
+                    next_token = torch.multinomial(probs, num_samples=1).squeeze(1)
+
+                while (self.prev is not None and self.prev == next_token.item()) or (self.prev in continue_list and next_token.item() in continue_list):
+                    # print("no double words")
+                    # print(f"next token: {next_token.item()}, {vocab.idx_to_token[next_token]}, {probs[0, next_token.item()]}")
+                    next_token = torch.multinomial(probs, num_samples=1).squeeze(1)
+                self.prev = next_token.item()
+
             else:
                 # Greedy decoding
                 next_token = torch.argmax(next_token_logits, dim=-1)
@@ -1056,6 +1149,16 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin):
             else:
                 tokens_to_add = next_token
 
+            """ fixed  """
+
+            # total.append(next_token.item())
+            # if next_token.item() in ban_list:
+                # print("wrong")
+                # print(f"next token: {next_token}, {vocab.idx_to_token[next_token]}")
+                # print(next_token.item(), probs[0, next_token.item()])
+            # #     # print(next_token_logits.shape)
+
+            #     print(f"tokens to add: {tokens_to_add}")
             input_ids = torch.cat([input_ids, tokens_to_add.unsqueeze(-1)], dim=-1)
 
             if eos_token_id is not None:
