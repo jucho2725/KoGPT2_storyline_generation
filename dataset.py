@@ -143,7 +143,7 @@ if __name__ == "__main__":
     import torch
     from gluonnlp.data import SentencepieceTokenizer
     from kogpt2.utils import get_tokenizer
-    from data import synoDataset
+    from dataset import synoDataset
     from kogpt2.pytorch_kogpt2 import get_pytorch_kogpt2_model
     from time import time
 

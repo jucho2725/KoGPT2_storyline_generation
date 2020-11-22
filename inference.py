@@ -214,7 +214,7 @@ if __name__ == "__main__":
     gen = [['멜로/로맨스'], ['공포', '스릴러'], ["SF"]]
     ex = ["반복되는 일상을 못 견디던 엘리엇은 세탁소에서 만난 제인과 사랑에", "헬렌과 함께 만나게 된 일행들은 지하실로 내려가지만, 그곳에는", "지구에서 탈출한 키모아와 그의 친구들은 수수께끼의 행성 N95로"]
 
-    model = GPT2("trained_models/gpt2_genre3_30.pt")
+    model = GPT2("trained_models/gpt2_genre_30.pt")
 
     from datetime import datetime
     cur = datetime.now().strftime(r"%m%d_%H%M")

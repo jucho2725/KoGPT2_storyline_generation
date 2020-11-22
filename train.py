@@ -7,7 +7,7 @@ import torch
 from torch.utils.data import DataLoader
 from gluonnlp.data import SentencepieceTokenizer
 from kogpt2.utils import get_tokenizer
-from data import synoDataset
+from dataset import synoDataset
 from kogpt2.pytorch_kogpt2 import get_pytorch_kogpt2_model
 
 tok_path = get_tokenizer()
@@ -15,7 +15,7 @@ model, vocab = get_pytorch_kogpt2_model()
 tok = SentencepieceTokenizer(tok_path, num_best=0, alpha=0)
 device = 'cpu'
 if torch.cuda.is_available():
-    device = 'cuda:1'
+    device = 'cuda'
 print(device)
 
 batch_size = 16
@@ -52,47 +52,13 @@ for epoch in range(epochs):
     print(f"Epoch {epoch} started" + '=' * 30)
 
     for idx, syno in enumerate(data_loader):
-        # data = torch.stack(syno)  # list of Tensor로 구성되어 있기 때문에 list를 stack을 통해 변환해준다.
-        # data = data.transpose(1, 0)
-        # syno_tens = data.to(device)
-
         # """  max 시퀀스가 넘으면 슬라이싱 """
         if len(syno) > max_seq_len:
             syno = syno[:max_seq_len]
 
-        syno_tens = torch.tensor(syno).unsqueeze(0).to(device)
+        syno_tensor = torch.tensor(syno).unsqueeze(0).to(device)
 
-        """ max 시퀀스 까지 이어붙이기 """
-        # torch.Size([1, number fo tokens])
-        # skip sample from dataset if it is longer than max_seq_len
-        # if syno_tens.size()[1] > max_seq_len:
-        #     print(f"syno tens > max seq len : {syno_tens.size()[1]}")
-        #     continue
-
-        # # The first sequence in the sequence
-        # if not torch.is_tensor(tmp_synos_tens):
-        #     tmp_synos_tens = syno_tens
-        #     continue
-        # else:
-        #     # The next syno does not fit in so we process the sequence and leave the last syno
-        #     # as the start for next sequence
-        #     if tmp_synos_tens.size()[1] + syno_tens.size()[1] > max_seq_len:
-        #         print(f"tmp + syno tens > max seq len : {tmp_synos_tens.size()[1]}, {syno_tens.size()[1]}")
-        #         work_synos_tens = tmp_synos_tens
-        #         tmp_synos_tens = syno_tens
-        #     else:
-        #         # Add the syno to sequence, continue and try to add more
-        #         print(f"tmp + syno tens < max seq len : {tmp_synos_tens.size()[1]}, {syno_tens.size()[1]}")
-        #         tmp_synos_tens = torch.cat([tmp_synos_tens, syno_tens[:, 1:]], dim=1)
-        #         print(f"tmp + syno tens concat : {tmp_synos_tens.size()[1]}")
-        #         continue
-
-        # print(f"added : {work_synos_tens.shape}")
-        # print(f"normal : {syno_tens.shape}")
-
-        # sequence ready, process it through the model
-        # outputs = model(work_synos_tens, labels=work_synos_tens)
-        outputs = model(syno_tens, labels=syno_tens)
+        outputs = model(syno_tensor, labels=syno_tensor)
         loss, logits = outputs[:2]
         loss.backward()
         sum_loss = sum_loss + loss.detach().data
