@@ -6,7 +6,9 @@ Storyline Generation Model based on KoGPT2
 
 사전학습모델은 SKTAI의 KoGPT2를 사용하였습니다. (https://github.com/SKT-AI/KoGPT2)
 
+![https://user-images.githubusercontent.com/46298038/100190303-4b68e280-2f31-11eb-974d-9ad8e4dc90d4.png]()
 
+위 그림과 같이 장르 정보를 받고 그에 맞는 스토리 라인을 출력하도록 설계하였습니다.
 
 ## Prerequisites
 
@@ -54,13 +56,16 @@ $python inference.py
 
 (주의: 언제든 데모 페이지 사용이 종료될 수 있습니다.)
 
-![image-20201122185924356](/home/jucho/.config/Typora/typora-user-images/image-20201122185924356.png)
+
 
 ## Things to know
 
 Transformers 에서 데이터 생성 후처리를 위해 generation 관련 util 들을 수정했습니다. `modeling_utils.py` 의 generation 함수에서 확인 가능합니다.
 
-## Contact
+## Author, Contact
+
+데이터셋 수집: 이정훈 (https://github.com/vhrehfdl)
+모델 설계 및 구현: 조진욱
 
 관련된 문의는 cju2725@gmail.com 으로 부탁드립니다.
 
