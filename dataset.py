@@ -15,30 +15,31 @@ def sentencePieceTokenizer():
 
 
 def koGPT2Vocab():
-    cachedir = '~/kogpt2/'
+    cachedir = "~/kogpt2/"
 
     # download vocab
     vocab_info = tokenizer
-    vocab_path = download(vocab_info['url'],
-                          vocab_info['fname'],
-                          vocab_info['chksum'],
-                          cachedir=cachedir)
+    vocab_path = download(
+        vocab_info["url"], vocab_info["fname"], vocab_info["chksum"], cachedir=cachedir
+    )
 
-    koGPT2_vocab = gluonnlp.vocab.BERTVocab.from_sentencepiece(vocab_path,
-                                                               mask_token=None,
-                                                               sep_token=None,
-                                                               cls_token=None,
-                                                               unknown_token='<unk>',
-                                                               padding_token='<pad>',
-                                                               bos_token='<s>',
-                                                               eos_token='</s>')
+    koGPT2_vocab = gluonnlp.vocab.BERTVocab.from_sentencepiece(
+        vocab_path,
+        mask_token=None,
+        sep_token=None,
+        cls_token=None,
+        unknown_token="<unk>",
+        padding_token="<pad>",
+        bos_token="<s>",
+        eos_token="</s>",
+    )
     return koGPT2_vocab
 
 
 def toString(list):
     if not list:
-        return ''
-    result = ''
+        return ""
+    result = ""
 
     for i in list:
         result = result + i
@@ -56,11 +57,15 @@ class storyDataset(Dataset):
 
         df = pd.read_csv(self.file_path)
 
-        for line in df['content']:
+        for line in df["content"]:
             tokenized_line = tokenizer(str(line))
             print(tokenized_line[-1])
 
-            index_of_words = [vocab[vocab.bos_token], ] + vocab[tokenized_line] + [vocab[vocab.eos_token]]
+            index_of_words = (
+                [vocab[vocab.bos_token],]
+                + vocab[tokenized_line]
+                + [vocab[vocab.eos_token]]
+            )
             self.sentence_list.append(index_of_words)
         print("sentence list length :", len(self.sentence_list))
 
@@ -82,14 +87,37 @@ class synoDataset(Dataset):
 
         df = pd.read_csv(self.file_path)
 
-        df['genre'] = df['genre'].str.strip("[]").str.split(',')
+        df["genre"] = df["genre"].str.strip("[]").str.split(",")
         # df['genre'] = df['genre'].fillna('none')
 
         ### gen_to_idx, genre_to_vocab 설정
         gen_to_vocab = {}
-        genres = ['SF', 'TV영화', '공포', '느와르', '다큐멘터리', '드라마', '멜로', '로맨스', '모험', '무협', '뮤지컬',
-                   '미스터리', '범죄', '서부', '서스펜스', '스릴러', '애니메이션', '액션',
-                   '멜로/로맨스', '가족', '서사', '전쟁', '코미디', '판타지']
+        genres = [
+            "SF",
+            "TV영화",
+            "공포",
+            "느와르",
+            "다큐멘터리",
+            "드라마",
+            "멜로",
+            "로맨스",
+            "모험",
+            "무협",
+            "뮤지컬",
+            "미스터리",
+            "범죄",
+            "서부",
+            "서스펜스",
+            "스릴러",
+            "애니메이션",
+            "액션",
+            "멜로/로맨스",
+            "가족",
+            "서사",
+            "전쟁",
+            "코미디",
+            "판타지",
+        ]
         print(f"We have {len(genres)} genres")
         gen_to_idx = {}
         for idx, gen in enumerate(genres):
@@ -102,12 +130,16 @@ class synoDataset(Dataset):
         count = 0
         err = 0
         for idx in range(len(df)):
-            line = df.loc[idx, 'content']
-            genres = df.loc[idx, 'genre']
+            line = df.loc[idx, "content"]
+            genres = df.loc[idx, "genre"]
             tokenized_line = tokenizer(str(line))
             if genres == "'none'":
                 print(genres)
-                index_of_words = [vocab[vocab.bos_token], ] + vocab[tokenized_line] + [vocab[vocab.eos_token]]
+                index_of_words = (
+                    [vocab[vocab.bos_token],]
+                    + vocab[tokenized_line]
+                    + [vocab[vocab.eos_token]]
+                )
             else:
                 tmp = []
 
@@ -120,8 +152,12 @@ class synoDataset(Dataset):
                     count += 1
                 else:
                     err += 1
-                index_of_words = [vocab[vocab.bos_token], ] + vocab[tmp] + vocab[tokenized_line] + [
-                    vocab[vocab.eos_token]]
+                index_of_words = (
+                    [vocab[vocab.bos_token],]
+                    + vocab[tmp]
+                    + vocab[tokenized_line]
+                    + [vocab[vocab.eos_token]]
+                )
             self.sentence_list.append(index_of_words)
 
         print(f"average length of data : {sum(df['content'].str.len()) / len(df)}")
@@ -139,6 +175,7 @@ class synoDataset(Dataset):
     def __getitem__(self, index):
         return self.sentence_list[index]
 
+
 if __name__ == "__main__":
     import torch
     from gluonnlp.data import SentencepieceTokenizer
@@ -152,7 +189,7 @@ if __name__ == "__main__":
     tok = SentencepieceTokenizer(tok_path, num_best=0, alpha=0)
 
     start = time()
-    print("Dataset Loading... ", end=' ')
-    dataset = synoDataset('./data/korean_naver_3.csv', vocab, tok)
+    print("Dataset Loading... ", end=" ")
+    dataset = synoDataset("./data/korean_naver_3.csv", vocab, tok)
     end = time()
     print(f"{start - end}")

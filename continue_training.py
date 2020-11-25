@@ -20,13 +20,13 @@ kogpt2_config = {
     "n_head": 12,
     "n_layer": 12,
     "n_positions": 1024,
-    "vocab_size": 50000
+    "vocab_size": 50000,
 }
 
 tok_path = get_tokenizer()
 model, vocab = get_pytorch_kogpt2_model()
 tok = SentencepieceTokenizer(tok_path, num_best=0, alpha=0)
-device = 'cpu'
+device = "cpu"
 if torch.cuda.is_available():
     device = torch.device("cuda:2")
 torch.cuda.device("cuda:2")
@@ -38,8 +38,9 @@ checkpoint = torch.load(load_path, map_location=device)
 # 1013: special token 학습한 뒤로 keys 값이 달라져서 이와 같은 작업 필요
 checkpoint_org = torch.load(org_path, map_location=device)
 
-ckpt_final = {k: v for k, v in
-              zip(checkpoint_org.keys(), checkpoint.values())}  # 원래 state_dict 에 value 를 새로운 학습 결과로 바꿔줌
+ckpt_final = {
+    k: v for k, v in zip(checkpoint_org.keys(), checkpoint.values())
+}  # 원래 state_dict 에 value 를 새로운 학습 결과로 바꿔줌
 
 # KoGPT-2 언어 모델 학습을 위한 GPT2LMHeadModel 선언
 model = GPT2LMHeadModel(config=GPT2Config.from_dict(kogpt2_config))
@@ -47,7 +48,8 @@ model.load_state_dict(ckpt_final)
 model.to(device)
 
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 batch_size = 16
 epochs = 100
@@ -55,8 +57,8 @@ learning_rate = 3e-5
 wamup_steps = 5000
 max_seq_len = 400
 
-print("Dataset Loading... ", end=' ')
-dataset = synoDataset('./data/korean_naver_2.csv', vocab, tok)
+print("Dataset Loading... ", end=" ")
+dataset = synoDataset("./data/korean_naver_2.csv", vocab, tok)
 data_loader = DataLoader(dataset, batch_size=1, shuffle=False)
 print("[[[Done]]]")
 
@@ -65,19 +67,21 @@ from transformers import AdamW, get_linear_schedule_with_warmup
 # print("devcie :", device)
 model.train()
 optimizer = AdamW(model.parameters(), lr=learning_rate)
-scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=wamup_steps, num_training_steps=-1)
+scheduler = get_linear_schedule_with_warmup(
+    optimizer, num_warmup_steps=wamup_steps, num_training_steps=-1
+)
 proc_seq_count = 0
 sum_loss = 0.0
 batch_count = 0
 model.zero_grad()
 
 tmp_synos_tens = None
-models_folder = 'trained_models'
+models_folder = "trained_models"
 if not os.path.exists(models_folder):
     os.mkdir(models_folder)
 
 for epoch in range(epochs):
-    print(f"Epoch {epoch} started" + '=' * 30)
+    print(f"Epoch {epoch} started" + "=" * 30)
 
     for idx, syno in enumerate(data_loader):
         # """  max 시퀀스가 넘으면 슬라이싱 """
@@ -108,6 +112,7 @@ for epoch in range(epochs):
 
     # Store the model after each epoch to compare the performance of them
     if epoch % 5 == 0:
-        torch.save(model.state_dict(), os.path.join(models_folder, f"gpt2_genre_pad_{epoch + 51}.pt"))
-
-
+        torch.save(
+            model.state_dict(),
+            os.path.join(models_folder, f"gpt2_genre_pad_{epoch + 51}.pt"),
+        )
